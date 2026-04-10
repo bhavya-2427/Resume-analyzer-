@@ -1,0 +1,280 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>Smart Resume Analyzer</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      padding: 30px;
+    }
+
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 700px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .section {
+      margin-top: 20px;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: blue;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background: darkblue;
+    }
+
+    .progress-bar {
+      width: 100%;
+      background: #ddd;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .progress {
+      height: 20px;
+      background: green;
+      width: 0%;
+      text-align: center;
+      color: white;
+      border-radius: 10px;
+    }
+
+    ul {
+      padding-left: 20px;
+      list-style: square;
+    }
+
+    pre {
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 5px;
+      max-height: 150px;
+      overflow: auto;
+    }
+
+    #loading {
+      display: none;
+      color: blue;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <h1>📄 Smart Resume Analyzer</h1>
+
+    <!-- Job Description -->
+    <div class="section">
+      <h3>Enter Job Description</h3>
+      <textarea id="jobDesc" rows="5"></textarea>
+    </div>
+
+    <!-- Upload -->
+    <div class="section">
+      <h3>Upload Resume</h3>
+      <input type="file" id="fileInput">
+      <br><br>
+      <button onclick="uploadFile()">Analyze</button>
+
+      <!-- Loading -->
+      <p id="loading">⏳ Analyzing resume...</p>
+    </div>
+
+    <!-- Match Score -->
+    <div class="section">
+      <h3>Match Score</h3>
+      <div class="progress-bar">
+        <div class="progress" id="progressBar">0%</div>
+      </div>
+    </div>
+
+    <!-- Strengths -->
+    <div class="section">
+      <h3>✅ Strengths</h3>
+      <ul id="strengths"></ul>
+    </div>
+
+    <!-- Weakness -->
+    <div class="section">
+      <h3>❗ Weakness</h3>
+      <ul id="missing"></ul>
+    </div>
+
+    <!-- Suggestions -->
+    <div class="section">
+      <h3>Suggestions</h3>
+      <p id="suggestion"></p>
+
+      <!-- Download Button -->
+      <button onclick="downloadReport()">Download Report 📄</button>
+    </div>
+
+    <!-- Skills -->
+    <div class="section">
+      <h3>Technical Skills</h3>
+      <ul id="tech"></ul>
+
+      <h3>Soft Skills</h3>
+      <ul id="soft"></ul>
+
+      <h3>Tools</h3>
+      <ul id="tools"></ul>
+    </div>
+
+    <!-- Resume Content -->
+    <div class="section">
+      <h3>Resume Content</h3>
+      <pre id="response"></pre>
+    </div>
+
+  </div>
+
+  <script>
+    async function uploadFile() {
+
+      // SHOW loading
+      document.getElementById("loading").style.display = "block";
+
+      const file = document.getElementById("fileInput").files[0];
+
+      let formData = new FormData();
+      formData.append("file", file);
+
+      let jobDesc = document.getElementById("jobDesc").value;
+      formData.append("jobDesc", jobDesc);
+
+      let res = await fetch("http://127.0.0.1:5000/upload", {
+        method: "POST",
+        body: formData
+      });
+
+      let data = await res.json();
+
+      // HIDE loading
+      document.getElementById("loading").style.display = "none";
+
+      // Resume text
+      document.getElementById("response").innerText = data.content;
+
+      // Skills
+      updateList("tech", data.technical_skills);
+      updateList("soft", data.soft_skills);
+      updateList("tools", data.tools);
+
+      // Strengths
+      let strengths = [
+        ...data.technical_skills,
+        ...data.soft_skills,
+        ...data.tools
+      ];
+      updateList("strengths", strengths);
+
+      // Weakness
+      updateList("missing", data.missing_skills);
+
+      // Suggestions
+      let suggestionText = "";
+
+      if (data.missing_skills.length > 0) {
+        suggestionText = "To improve your chances, focus on learning: " + data.missing_skills.join(", ");
+      } else {
+        suggestionText = "Great! Your resume matches the job very well.";
+      }
+
+      document.getElementById("suggestion").innerText = suggestionText;
+
+      // Progress bar
+      let score = data.match_score ? data.match_score.toFixed(2) : 0;
+      let bar = document.getElementById("progressBar");
+
+      bar.style.width = score + "%";
+      bar.innerText = score + "%";
+
+      // Color logic
+      if (score < 40) {
+        bar.style.background = "red";
+      } else if (score < 70) {
+        bar.style.background = "orange";
+      } else {
+        bar.style.background = "green";
+      }
+    }
+
+    function updateList(id, items) {
+      let list = document.getElementById(id);
+      list.innerHTML = "";
+
+      items.forEach(item => {
+        let li = document.createElement("li");
+        li.innerText = item;
+        list.appendChild(li);
+      });
+    }
+
+    function downloadReport() {
+
+      let content = document.getElementById("response").innerText;
+      let score = document.getElementById("progressBar").innerText;
+      let strengths = document.getElementById("strengths").innerText;
+      let weakness = document.getElementById("missing").innerText;
+      let suggestion = document.getElementById("suggestion").innerText;
+
+      let report = `
+RESUME ANALYSIS REPORT
+
+Match Score: ${score}
+
+Strengths:
+${strengths}
+
+Weakness:
+${weakness}
+
+Suggestions:
+${suggestion}
+
+Resume Content:
+${content}
+      `;
+
+      let blob = new Blob([report], { type: "text/plain" });
+      let link = document.createElement("a");
+
+      link.href = URL.createObjectURL(blob);
+      link.download = "report.txt";
+      link.click();
+    }
+  </script>
+
+</body>
+</html>
