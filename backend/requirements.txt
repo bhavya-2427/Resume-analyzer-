@@ -4,3 +4,4 @@ pdfplumber
 python-docx
 spacy
 sentence-transformers
+gunicorn
