@@ -1,280 +1,370 @@
 <!doctype html>
-<html>
-
+<html lang="en">
 <head>
-  <title>Smart Resume Analyzer</title>
-
-  <style>
-    body {
-      font-family: Arial;
-      background: #f4f6f8;
-      display: flex;
-      justify-content: center;
-      padding: 30px;
-    }
-
-    .container {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      width: 700px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    h1 {
-      text-align: center;
-    }
-
-    .section {
-      margin-top: 20px;
-    }
-
-    textarea {
-      width: 100%;
-      padding: 10px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-
-    button {
-      padding: 10px 20px;
-      background: blue;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-
-    button:hover {
-      background: darkblue;
-    }
-
-    .progress-bar {
-      width: 100%;
-      background: #ddd;
-      border-radius: 10px;
-      margin-top: 10px;
-    }
-
-    .progress {
-      height: 20px;
-      background: green;
-      width: 0%;
-      text-align: center;
-      color: white;
-      border-radius: 10px;
-    }
-
-    ul {
-      padding-left: 20px;
-      list-style: square;
-    }
-
-    pre {
-      background: #f1f1f1;
-      padding: 10px;
-      border-radius: 5px;
-      max-height: 150px;
-      overflow: auto;
-    }
-
-    #loading {
-      display: none;
-      color: blue;
-      font-weight: bold;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Smart Resume Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{--ink:#12203D;--ink-2:#1B2F52;--paper:#FBFAF7;--paper-dim:#F1EFE9;--gold:#E3A008;--green:#1F9D55;--coral:#E85D4C;--muted:#8892A6;--text:#1C2333;}
+*{box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--ink);background-image:radial-gradient(circle at 15% 0%, var(--ink-2), var(--ink) 55%);color:var(--text);margin:0;padding:48px 20px 80px;display:flex;justify-content:center;}
+.wrap{width:720px;max-width:100%;}
+.board-header{text-align:center;color:var(--paper);margin-bottom:36px;}
+.board-header .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.25em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;}
+.board-header h1{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;margin:0 0 8px;letter-spacing:-0.01em;}
+.board-header p{color:#AEB8CC;font-size:14px;margin:0;}
+.card{background:var(--paper);border-radius:14px;padding:22px 24px;margin-top:18px;box-shadow:0 12px 30px rgba(0,0,0,0.18);}
+.step-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:8px;display:block;}
+.card h3{margin:0 0 12px;font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600;color:var(--ink);}
+.card-note{font-size:13px;color:var(--muted);margin:-6px 0 12px;}
+textarea{width:100%;padding:12px;border-radius:8px;border:1.5px solid var(--paper-dim);background:#fff;font-family:'Inter',sans-serif;font-size:14px;resize:vertical;}
+textarea:focus,input:focus,button:focus{outline:2px solid var(--gold);outline-offset:2px;}
+input[type="file"]{font-size:13px;}
+button{padding:11px 24px;background:var(--ink);color:var(--paper);border:none;border-radius:999px;cursor:pointer;margin-top:14px;font-size:13px;font-weight:600;font-family:'Space Grotesk',sans-serif;letter-spacing:0.02em;transition:transform .15s ease,background .15s ease;}
+button:hover{background:#0C1728;transform:translateY(-1px);}
+button.secondary{background:transparent;color:var(--ink);border:1.5px solid var(--ink);}
+button.secondary:hover{background:var(--paper-dim);}
+#loading,#batchLoading{display:none;color:var(--gold);font-weight:600;font-size:13px;margin-top:10px;font-family:'IBM Plex Mono',monospace;}
+.ticket{margin-top:24px;border-radius:16px;overflow:hidden;box-shadow:0 20px 45px rgba(0,0,0,0.3);background:var(--paper);}
+.ticket-header{background:var(--ink);color:var(--paper);padding:14px 22px;display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;}
+.ticket-header span:last-child{color:var(--gold);}
+.ticket-body{padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:18px 24px;}
+.ticket-field .label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;}
+.ticket-field .value{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--ink);}
+.status-pill{display:inline-block;padding:4px 14px;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:0.06em;color:white;}
+.ticket-divider{position:relative;border-top:2px dashed var(--paper-dim);margin:0 24px;}
+.ticket-divider::before,.ticket-divider::after{content:"";position:absolute;top:-10px;width:20px;height:20px;background:var(--ink);border-radius:50%;}
+.ticket-divider::before{left:-34px;}
+.ticket-divider::after{right:-34px;}
+.barcode{height:36px;margin:18px 24px 0;background:repeating-linear-gradient(90deg,var(--ink) 0px,var(--ink) 2px,transparent 2px,transparent 5px,var(--ink) 5px,var(--ink) 6px,transparent 6px,transparent 10px,var(--ink) 10px,var(--ink) 13px,transparent 13px,transparent 16px);}
+.ticket-footer{padding:10px 24px 18px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.06em;text-align:center;}
+#scoreExplanation{font-size:13px;color:var(--text);margin:14px 24px 0;padding-top:14px;border-top:1px solid var(--paper-dim);}
+.chips{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{background:var(--paper-dim);color:var(--ink);padding:5px 12px;border-radius:999px;font-size:13px;font-weight:500;border:1px solid #E4E1D8;}
+.chip.missing{background:#FDECEA;color:var(--coral);border-color:#F6CFC9;}
+.empty-note{color:var(--muted);font-size:13px;font-style:italic;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media (max-width:640px){.ticket-body{grid-template-columns:1fr;}.grid-2{grid-template-columns:1fr;}}
+table.rank-table{width:100%;border-collapse:collapse;font-size:13px;}
+table.rank-table th,table.rank-table td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--paper-dim);}
+table.rank-table th{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:0.06em;font-family:'IBM Plex Mono',monospace;}
+.rank-badge{display:inline-block;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--gold);text-align:center;line-height:22px;font-weight:700;font-size:11px;font-family:'IBM Plex Mono',monospace;}
+.score-pill{padding:3px 10px;border-radius:999px;font-weight:600;font-size:12px;color:white;}
+pre{background:var(--paper-dim);padding:12px;border-radius:8px;max-height:150px;overflow:auto;font-size:12px;font-family:'IBM Plex Mono',monospace;white-space:pre-wrap;}
+.learn-item{margin-bottom:12px;}
+.learn-item b{color:var(--ink);font-family:'Space Grotesk',sans-serif;}
+.learn-item span{font-size:13px;color:var(--text);}
+</style>
 </head>
-
 <body>
+<div class="wrap">
+<div class="board-header">
+<div class="eyebrow">Terminal · Career Departures</div>
+<h1>📄 Smart Resume Analyzer</h1>
+<p>Check in your resume. Get your boarding pass to the role.</p>
+</div>
 
-  <div class="container">
+<div class="card">
+<span class="step-label">Step 1 · Destination</span>
+<h3>Job Description</h3>
+<textarea id="jobDesc" rows="5" placeholder="Paste the job description here..."></textarea>
+</div>
 
-    <h1>📄 Smart Resume Analyzer</h1>
+<div class="card">
+<span class="step-label">Step 2 · Check-In</span>
+<h3>Upload Resume</h3>
+<input type="file" id="fileInput" accept=".pdf,.docx">
+<br>
+<button onclick="uploadFile()">Analyze Resume</button>
+<p id="loading">⏳ Analyzing resume...</p>
+</div>
 
-    <!-- Job Description -->
-    <div class="section">
-      <h3>Enter Job Description</h3>
-      <textarea id="jobDesc" rows="5"></textarea>
-    </div>
+<div class="card">
+<span class="step-label">Optional · Group Check-In</span>
+<h3>Rank Multiple Resumes</h3>
+<p class="card-note">Upload several resumes for the same role — get them ranked best to worst.</p>
+<input type="file" id="batchInput" accept=".pdf,.docx" multiple style="display:none">
+<button onclick="document.getElementById('batchInput').click()">+ Add Resume(s)</button>
+<div id="batchFileList" style="margin-top:10px;"></div>
+<br>
+<button onclick="uploadBatch()">Rank Resumes</button>
+<p id="batchLoading">⏳ Analyzing and ranking resumes...</p>
+<div id="batchResults" style="margin-top:14px;"></div>
+</div>
 
-    <!-- Upload -->
-    <div class="section">
-      <h3>Upload Resume</h3>
-      <input type="file" id="fileInput">
-      <br><br>
-      <button onclick="uploadFile()">Analyze</button>
+<div class="ticket">
+<div class="ticket-header">
+<span>Boarding Pass</span>
+<span id="ticketStatus">— AWAITING CHECK-IN —</span>
+</div>
+<div class="ticket-body">
+<div class="ticket-field"><span class="label">Match Score</span><span class="value" id="progressBar">0%</span></div>
+<div class="ticket-field"><span class="label">Status</span><span class="value"><span class="status-pill" id="statusPill" style="background:var(--muted);">PENDING</span></span></div>
+<div class="ticket-field"><span class="label">Keyword Match</span><span class="value" id="keywordScore" style="font-size:16px;">-%</span></div>
+<div class="ticket-field"><span class="label">Semantic Match</span><span class="value" id="semanticScore" style="font-size:16px;">-%</span></div>
+</div>
+<div class="ticket-divider"></div>
+<p id="scoreExplanation"></p>
+<div style="max-width:100%;margin:16px 24px 0;">
+<canvas id="scoreChart" height="110"></canvas>
+</div>
+<div class="barcode"></div>
+<div class="ticket-footer">RESUME-ANALYZER · SEMANTIC MATCHING ENGINE · SBERT-CALIBRATED</div>
+</div>
 
-      <!-- Loading -->
-      <p id="loading">⏳ Analyzing resume...</p>
-    </div>
+<div class="card">
+<h3>Skills Coverage by Category</h3>
+<div style="max-width:420px;margin:0 auto;">
+<canvas id="categoryChart" height="200"></canvas>
+</div>
+</div>
 
-    <!-- Match Score -->
-    <div class="section">
-      <h3>Match Score</h3>
-      <div class="progress-bar">
-        <div class="progress" id="progressBar">0%</div>
-      </div>
-    </div>
+<div class="grid-2">
+<div class="card"><h3>✅ Strengths</h3><div class="chips" id="strengths"></div></div>
+<div class="card"><h3>❗ Missing Skills</h3><div class="chips" id="missing"></div></div>
+</div>
 
-    <!-- Strengths -->
-    <div class="section">
-      <h3>✅ Strengths</h3>
-      <ul id="strengths"></ul>
-    </div>
+<div class="card">
+<h3>Suggestions</h3>
+<p id="suggestion" style="font-size:14px;"></p>
+<button class="secondary" onclick="downloadReport()">Download Report 📄</button>
+</div>
 
-    <!-- Weakness -->
-    <div class="section">
-      <h3>❗ Weakness</h3>
-      <ul id="missing"></ul>
-    </div>
+<div class="card">
+<h3>📚 What to Learn Next</h3>
+<div id="learningPlan"></div>
+</div>
 
-    <!-- Suggestions -->
-    <div class="section">
-      <h3>Suggestions</h3>
-      <p id="suggestion"></p>
+<div class="card"><h3>Technical Skills</h3><div class="chips" id="tech"></div></div>
+<div class="card"><h3>Soft Skills</h3><div class="chips" id="soft"></div></div>
+<div class="card"><h3>Tools</h3><div class="chips" id="tools"></div></div>
 
-      <!-- Download Button -->
-      <button onclick="downloadReport()">Download Report 📄</button>
-    </div>
+<div class="card">
+<h3>Extracted Resume Text</h3>
+<pre id="response"></pre>
+</div>
 
-    <!-- Skills -->
-    <div class="section">
-      <h3>Technical Skills</h3>
-      <ul id="tech"></ul>
+</div>
 
-      <h3>Soft Skills</h3>
-      <ul id="soft"></ul>
+<script>
+async function uploadFile() {
+  document.getElementById("loading").style.display = "block";
+  const file = document.getElementById("fileInput").files[0];
+  if (!file) {
+    alert("Please select a resume file (.pdf or .docx) first.");
+    document.getElementById("loading").style.display = "none";
+    return;
+  }
+  let formData = new FormData();
+  formData.append("file", file);
+  let jobDesc = document.getElementById("jobDesc").value;
+  formData.append("jobDesc", jobDesc);
 
-      <h3>Tools</h3>
-      <ul id="tools"></ul>
-    </div>
+  let res = await fetch("http://127.0.0.1:5000/upload", { method: "POST", body: formData });
+  let data = await res.json();
+  document.getElementById("loading").style.display = "none";
 
-    <!-- Resume Content -->
-    <div class="section">
-      <h3>Resume Content</h3>
-      <pre id="response"></pre>
-    </div>
+  if (data.error) { alert("Error: " + data.error); return; }
 
-  </div>
+  document.getElementById("response").innerText = data.content;
+  updateChips("tech", data.technical_skills);
+  updateChips("soft", data.soft_skills);
+  updateChips("tools", data.tools);
 
-  <script>
-    async function uploadFile() {
+  let strengths = [...data.technical_skills, ...data.soft_skills, ...data.tools];
+  updateChips("strengths", strengths);
+  updateChips("missing", data.missing_skills, true);
 
-      // SHOW loading
-      document.getElementById("loading").style.display = "block";
+  document.getElementById("suggestion").innerText = data.missing_skills.length > 0
+    ? "To improve your chances, focus on learning: " + data.missing_skills.join(", ")
+    : "Great! Your resume matches the job very well.";
 
-      const file = document.getElementById("fileInput").files[0];
+  let score = data.match_score ? data.match_score.toFixed(2) : 0;
+  document.getElementById("progressBar").innerText = score + "%";
+  document.getElementById("keywordScore").innerText = (data.keyword_score ? data.keyword_score.toFixed(2) : 0) + "%";
+  document.getElementById("semanticScore").innerText = (data.semantic_score ? data.semantic_score.toFixed(2) : 0) + "%";
 
-      let formData = new FormData();
-      formData.append("file", file);
+  if (data.explanation && data.explanation.summary) {
+    document.getElementById("scoreExplanation").innerText = data.explanation.summary;
+  }
 
-      let jobDesc = document.getElementById("jobDesc").value;
-      formData.append("jobDesc", jobDesc);
+  renderScoreChart(data.keyword_score || 0, data.semantic_score || 0);
+  renderCategoryChart(data.category_breakdown);
+  renderLearningPlan(data.learning_plan);
 
-      let res = await fetch("http://127.0.0.1:5000/upload", {
-        method: "POST",
-        body: formData
-      });
+  const pill = document.getElementById("statusPill");
+  const ticketStatus = document.getElementById("ticketStatus");
+  if (score < 40) {
+    pill.style.background = "var(--coral)"; pill.innerText = "GATE CLOSED";
+    ticketStatus.innerText = "— STATUS: GATE CLOSED —";
+  } else if (score < 70) {
+    pill.style.background = "var(--gold)"; pill.innerText = "STANDBY";
+    ticketStatus.innerText = "— STATUS: STANDBY —";
+  } else {
+    pill.style.background = "var(--green)"; pill.innerText = "CONFIRMED";
+    ticketStatus.innerText = "— STATUS: CONFIRMED —";
+  }
+}
 
-      let data = await res.json();
+let selectedBatchFiles = [];
 
-      // HIDE loading
-      document.getElementById("loading").style.display = "none";
+document.getElementById("batchInput").addEventListener("change", (e) => {
+  for (const f of e.target.files) {
+    // avoid adding the exact same file twice
+    const alreadyAdded = selectedBatchFiles.some(existing => existing.name === f.name && existing.size === f.size);
+    if (!alreadyAdded) selectedBatchFiles.push(f);
+  }
+  e.target.value = ""; // reset so the same file(s) can be re-picked if needed
+  renderBatchFileList();
+});
 
-      // Resume text
-      document.getElementById("response").innerText = data.content;
+function renderBatchFileList() {
+  const container = document.getElementById("batchFileList");
+  if (selectedBatchFiles.length === 0) {
+    container.innerHTML = "<p class='empty-note'>No resumes added yet.</p>";
+    return;
+  }
+  container.innerHTML = selectedBatchFiles.map((f, i) =>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--paper-dim);font-size:13px;">
+      <span>${f.name}</span>
+      <span style="cursor:pointer;color:var(--coral);font-weight:600;" onclick="removeBatchFile(${i})">✕</span>
+    </div>`
+  ).join("");
+}
 
-      // Skills
-      updateList("tech", data.technical_skills);
-      updateList("soft", data.soft_skills);
-      updateList("tools", data.tools);
+function removeBatchFile(i) {
+  selectedBatchFiles.splice(i, 1);
+  renderBatchFileList();
+}
 
-      // Strengths
-      let strengths = [
-        ...data.technical_skills,
-        ...data.soft_skills,
-        ...data.tools
-      ];
-      updateList("strengths", strengths);
+renderBatchFileList();
 
-      // Weakness
-      updateList("missing", data.missing_skills);
+async function uploadBatch() {
+  const jobDesc = document.getElementById("jobDesc").value;
 
-      // Suggestions
-      let suggestionText = "";
+  if (selectedBatchFiles.length === 0) {
+    alert("Please add at least 2 resume files (.pdf or .docx) to rank.");
+    return;
+  }
 
-      if (data.missing_skills.length > 0) {
-        suggestionText = "To improve your chances, focus on learning: " + data.missing_skills.join(", ");
-      } else {
-        suggestionText = "Great! Your resume matches the job very well.";
-      }
+  document.getElementById("batchLoading").style.display = "block";
+  document.getElementById("batchResults").innerHTML = "";
 
-      document.getElementById("suggestion").innerText = suggestionText;
+  let formData = new FormData();
+  for (let f of selectedBatchFiles) formData.append("files", f);
+  formData.append("jobDesc", jobDesc);
 
-      // Progress bar
-      let score = data.match_score ? data.match_score.toFixed(2) : 0;
-      let bar = document.getElementById("progressBar");
+  let res = await fetch("http://127.0.0.1:5000/upload-batch", { method: "POST", body: formData });
+  let data = await res.json();
+  document.getElementById("batchLoading").style.display = "none";
 
-      bar.style.width = score + "%";
-      bar.innerText = score + "%";
+  if (data.error) { alert("Error: " + data.error); return; }
+  renderRankTable(data.ranked_results, data.errors);
+}
 
-      // Color logic
-      if (score < 40) {
-        bar.style.background = "red";
-      } else if (score < 70) {
-        bar.style.background = "orange";
-      } else {
-        bar.style.background = "green";
-      }
-    }
+function scoreColor(score) {
+  if (score < 40) return "var(--coral)";
+  if (score < 70) return "var(--gold)";
+  return "var(--green)";
+}
 
-    function updateList(id, items) {
-      let list = document.getElementById(id);
-      list.innerHTML = "";
+function renderRankTable(results, errors) {
+  const container = document.getElementById("batchResults");
+  if (!results || results.length === 0) {
+    container.innerHTML = "<p class='empty-note'>No resumes could be processed.</p>";
+    return;
+  }
+  let html = '<table class="rank-table"><thead><tr><th>Rank</th><th>File</th><th>Match Score</th><th>Top Missing Skills</th></tr></thead><tbody>';
+  results.forEach(r => {
+    const missing = (r.missing_skills || []).slice(0, 3).join(", ") || "None";
+    html += '<tr><td><span class="rank-badge">' + r.rank + '</span></td><td>' + r.filename + '</td><td><span class="score-pill" style="background:' + scoreColor(r.match_score) + '">' + r.match_score.toFixed(1) + '%</span></td><td>' + missing + '</td></tr>';
+  });
+  html += "</tbody></table>";
+  if (errors && errors.length > 0) {
+    html += '<p style="font-size:12px;color:var(--coral);margin-top:10px;">' + errors.length + ' file(s) could not be processed: ' + errors.map(e => e.filename).join(", ") + '</p>';
+  }
+  container.innerHTML = html;
+}
 
-      items.forEach(item => {
-        let li = document.createElement("li");
-        li.innerText = item;
-        list.appendChild(li);
-      });
-    }
+let scoreChartInstance = null;
+let categoryChartInstance = null;
 
-    function downloadReport() {
+function renderScoreChart(keywordScore, semanticScore) {
+  const ctx = document.getElementById("scoreChart");
+  if (scoreChartInstance) scoreChartInstance.destroy();
+  scoreChartInstance = new Chart(ctx, {
+    type: "bar",
+    data: { labels: ["Keyword Match", "Semantic Match"], datasets: [{ data: [keywordScore, semanticScore], backgroundColor: ["#C7CEDC", "#12203D"], borderRadius: 6 }] },
+    options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { min: 0, max: 100 } } }
+  });
+}
 
-      let content = document.getElementById("response").innerText;
-      let score = document.getElementById("progressBar").innerText;
-      let strengths = document.getElementById("strengths").innerText;
-      let weakness = document.getElementById("missing").innerText;
-      let suggestion = document.getElementById("suggestion").innerText;
+function renderCategoryChart(breakdown) {
+  if (!breakdown) return;
+  const ctx = document.getElementById("categoryChart");
+  if (categoryChartInstance) categoryChartInstance.destroy();
+  const labels = ["Technical", "Soft Skills", "Tools"];
+  const required = [breakdown.technical.required, breakdown.soft.required, breakdown.tools.required];
+  const matched = [breakdown.technical.matched, breakdown.soft.matched, breakdown.tools.matched];
+  categoryChartInstance = new Chart(ctx, {
+    type: "bar",
+    data: { labels: labels, datasets: [
+      { label: "Required (from JD)", data: required, backgroundColor: "#E4E1D8", borderRadius: 6 },
+      { label: "You Have", data: matched, backgroundColor: "#E3A008", borderRadius: 6 }
+    ]},
+    options: { plugins: { legend: { position: "bottom" } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+  });
+}
 
-      let report = `
-RESUME ANALYSIS REPORT
+function renderLearningPlan(plan) {
+  const container = document.getElementById("learningPlan");
+  container.innerHTML = "";
+  if (!plan || plan.length === 0) {
+    container.innerHTML = "<p class='empty-note'>Nothing missing — you're already a strong match!</p>";
+    return;
+  }
+  plan.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "learn-item";
+    div.innerHTML = "<b>" + item.skill + "</b><br><span>" + item.suggestion + "</span>";
+    container.appendChild(div);
+  });
+}
 
-Match Score: ${score}
+function updateChips(id, items, isMissing) {
+  let container = document.getElementById(id);
+  container.innerHTML = "";
+  if (!items || items.length === 0) {
+    let note = document.createElement("span");
+    note.className = "empty-note";
+    note.innerText = "None detected";
+    container.appendChild(note);
+    return;
+  }
+  items.forEach(item => {
+    let chip = document.createElement("span");
+    chip.className = "chip" + (isMissing ? " missing" : "");
+    chip.innerText = item;
+    container.appendChild(chip);
+  });
+}
 
-Strengths:
-${strengths}
-
-Weakness:
-${weakness}
-
-Suggestions:
-${suggestion}
-
-Resume Content:
-${content}
-      `;
-
-      let blob = new Blob([report], { type: "text/plain" });
-      let link = document.createElement("a");
-
-      link.href = URL.createObjectURL(blob);
-      link.download = "report.txt";
-      link.click();
-    }
-  </script>
-
+function downloadReport() {
+  let content = document.getElementById("response").innerText;
+  let score = document.getElementById("progressBar").innerText;
+  let strengths = document.getElementById("strengths").innerText;
+  let weakness = document.getElementById("missing").innerText;
+  let suggestion = document.getElementById("suggestion").innerText;
+  let report = "\nRESUME ANALYSIS REPORT\n\nMatch Score: " + score + "\n\nStrengths:\n" + strengths + "\n\nWeakness:\n" + weakness + "\n\nSuggestions:\n" + suggestion + "\n\nResume Content:\n" + content + "\n      ";
+  let blob = new Blob([report], { type: "text/plain" });
+  let link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "report.txt";
+  link.click();
+}
+</script>
 </body>
 </html>
