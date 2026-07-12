@@ -163,7 +163,7 @@ async function uploadFile() {
   let jobDesc = document.getElementById("jobDesc").value;
   formData.append("jobDesc", jobDesc);
 
-  let res = await fetch("http://127.0.0.1:5000/upload", { method: "POST", body: formData });
+  let res = await fetch("https://resume-analyzer-backend-wk7z.onrender.com/upload", { method: "POST", body: formData });
   let data = await res.json();
   document.getElementById("loading").style.display = "none";
 
@@ -257,7 +257,7 @@ async function uploadBatch() {
   for (let f of selectedBatchFiles) formData.append("files", f);
   formData.append("jobDesc", jobDesc);
 
-  let res = await fetch("http://127.0.0.1:5000/upload-batch", { method: "POST", body: formData });
+  let res = await fetch("https://resume-analyzer-backend-wk7z.onrender.com/upload-batch", { method: "POST", body: formData });
   let data = await res.json();
   document.getElementById("batchLoading").style.display = "none";
 
