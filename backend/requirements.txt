@@ -3,5 +3,6 @@ flask-cors
 pdfplumber
 python-docx
 spacy
-sentence-transformers
+fastembed
+numpy
 gunicorn

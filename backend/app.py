@@ -5,7 +5,8 @@ import docx  # for reading .docx (Word) files
 import spacy
 from spacy.matcher import PhraseMatcher
 import re
-from sentence_transformers import SentenceTransformer, util
+from fastembed import TextEmbedding
+import numpy as np
 
 # ---------------- SKILL LISTS ----------------
 # (Expanded from ~30 to 100+ skills so more resumes get recognized properly)
@@ -62,20 +63,20 @@ tech_matcher = build_matcher(TECHNICAL_SKILLS)
 soft_matcher = build_matcher(SOFT_SKILLS)
 tools_matcher = build_matcher(TOOLS)
 
-# ---------------- SENTENCE-BERT SETUP ----------------
-# This is the model that gives us TRUE semantic matching.
-# "all-MiniLM-L6-v2" is small (~80MB) and fast, good enough for this use case.
-# Unlike keyword matching, this understands MEANING:
-#   "problem-solving" and "problem solving" -> recognized as same
-#   "ML" and "Machine Learning" -> recognized as related
-sbert_model = SentenceTransformer("all-MiniLM-L6-v2")
+# ---------------- SEMANTIC EMBEDDING SETUP (fastembed) ----------------
+# Using fastembed instead of sentence-transformers here: fastembed runs
+# quantized ONNX models with no PyTorch dependency, so it uses far less
+# memory (~100MB vs 500MB-1GB+ for the full torch + sentence-transformers
+# stack). This matters for deploying on free-tier hosting (512MB RAM limit).
+# Same underlying model family (MiniLM), so scoring behavior stays consistent.
+embed_model = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 def semantic_similarity(text1, text2):
     """Returns similarity score (0-100) between two texts based on meaning, not exact words."""
-    embeddings = sbert_model.encode([text1, text2], convert_to_tensor=True)
-    score = util.cos_sim(embeddings[0], embeddings[1]).item()
-    # cos_sim ranges roughly -1 to 1; clamp and scale to 0-100
-    score = max(0, score) * 100
+    embeddings = list(embed_model.embed([text1, text2]))
+    a, b = embeddings[0], embeddings[1]
+    cos_sim = np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+    score = max(0, float(cos_sim)) * 100
     return round(score, 2)
 
 def calibrate_score(raw_score, low=15, high=75):
