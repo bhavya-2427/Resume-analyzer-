@@ -32,9 +32,11 @@ Most "resume matcher" projects are just `if skill in text` — that's substring 
 |---|---|
 | Backend | Python, Flask |
 | NLP / Skill Extraction | spaCy (`PhraseMatcher`, `en_core_web_sm`) |
-| Semantic Matching | Sentence-Transformers (`all-MiniLM-L6-v2`) |
+| Semantic Matching | fastembed — quantized ONNX `all-MiniLM-L6-v2` |
 | File Parsing | pdfplumber, python-docx |
 | Frontend | HTML, CSS, JavaScript, Chart.js |
+
+Embeddings run through **fastembed** rather than the `sentence-transformers` library: it serves the same `all-MiniLM-L6-v2` model as quantized ONNX with no PyTorch dependency, using roughly 100MB instead of 500MB–1GB. That's what makes the backend fit in a 512MB free-tier instance.
 
 ## How the Matching Works
 
@@ -50,7 +52,7 @@ The semantic matching was validated against 12 manually-labeled resume-JD pairs 
 
 | Metric | Before Calibration | After Calibration |
 |---|---|---|
-| Mean Absolute Error (MAE) | 24.74 | 18.85 |
+| Mean Absolute Error (MAE) | 24.74 | 18.95 |
 | Correlation with manual judgment | 0.80 | 0.80 |
 
 This showed the model ranks candidates in roughly the correct order (0.80 correlation), and that a simple calibration step meaningfully improved score accuracy.
