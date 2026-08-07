@@ -46,6 +46,29 @@ TOOLS = [
     "colab", "jupyter", "anaconda"
 ]
 
+# ---------------- TEXT NORMALIZATION ----------------
+# Defined before the matcher setup below, because skill patterns are normalized
+# with this same function -- both sides of a match must be normalized the same
+# way or the pattern can never match.
+
+def normalize_text(text):
+    """Fixes small mismatches like 'problem-solving' vs 'problem solving'
+    by converting hyphens/underscores/slashes to spaces before matching.
+
+    Also collapses every run of whitespace to a single space. This matters
+    because spaCy only attaches a lone space to the preceding token -- a newline,
+    tab, or double space becomes its own token, and that extra token breaks
+    multi-word PhraseMatcher patterns. Without this, "Machine  Learning" and a
+    "Machine\\nLearning" line wrap both silently fail to match "machine learning".
+    Both are common in text extracted from PDFs.
+
+    Safe to flatten newlines here because the result is only ever used for skill
+    matching -- section splitting and the semantic embedding both read raw text.
+    """
+    text = re.sub(r"[-_/]", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text
+
 # ---------------- SPACY SETUP ----------------
 # Why spaCy PhraseMatcher instead of "if skill in text": plain substring
 # matching has a bug -- "java" would wrongly match inside "javascript".
@@ -55,13 +78,25 @@ nlp = spacy.load("en_core_web_sm")
 
 def build_matcher(skill_list):
     matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
-    patterns = [nlp.make_doc(skill) for skill in skill_list]
-    matcher.add("SKILLS", patterns)
+    # One label per skill (rather than a single shared "SKILLS" label) so a match
+    # can be mapped back to the canonical skill name instead of the raw matched
+    # text, which can differ in case or spacing.
+    for skill in skill_list:
+        # The pattern is normalized the same way as the text being searched, so
+        # entries containing '/' or '-' still match: normalize_text rewrites those
+        # to spaces on both sides. Without this, "ci/cd" and "scikit-learn" could
+        # never match anything. The label stays the canonical skill name.
+        matcher.add(skill, [nlp.make_doc(normalize_text(skill))])
     return matcher
 
 tech_matcher = build_matcher(TECHNICAL_SKILLS)
 soft_matcher = build_matcher(SOFT_SKILLS)
 tools_matcher = build_matcher(TOOLS)
+
+# Combined matcher for the job description, so required skills are extracted with
+# the same word-boundary awareness as resume skills.
+ALL_SKILLS = TECHNICAL_SKILLS + SOFT_SKILLS + TOOLS
+all_matcher = build_matcher(ALL_SKILLS)
 
 # ---------------- SEMANTIC EMBEDDING SETUP (fastembed) ----------------
 # Using fastembed instead of sentence-transformers here: fastembed runs
@@ -92,14 +127,12 @@ def calibrate_score(raw_score, low=15, high=75):
     stretched = (raw_score - low) / (high - low) * 100
     return round(max(0, min(100, stretched)), 2)
 
-def extract_skills(text, matcher, skill_list):
-    """Run a PhraseMatcher over text and return matched skills (deduplicated)."""
+def extract_skills(text, matcher):
+    """Run a PhraseMatcher over text and return matched canonical skills (deduplicated)."""
     doc = nlp(text)
-    matches = matcher(doc)
     found = set()
-    for match_id, start, end in matches:
-        span = doc[start:end].text.lower()
-        found.add(span)
+    for match_id, start, end in matcher(doc):
+        found.add(nlp.vocab.strings[match_id])
     return list(found)
 
 # ---------------- SECTION DETECTION ----------------
@@ -132,11 +165,6 @@ def split_sections(text):
         sections[current] += line + "\n"
 
     return sections
-
-def normalize_text(text):
-    """Fixes small mismatches like 'problem-solving' vs 'problem solving'
-    by converting hyphens/underscores to spaces before matching."""
-    return re.sub(r"[-_/]", " ", text)
 
 # ---------------- LEARNING RESOURCES ----------------
 # Maps common skills to a short, practical suggestion on how to learn them.
@@ -223,19 +251,20 @@ def analyze_resume(file, job_desc):
     sections = split_sections(text)
 
     # -------- Skill Extraction --------
-    tech_found = extract_skills(text_normalized, tech_matcher, TECHNICAL_SKILLS)
-    soft_found = extract_skills(text_normalized, soft_matcher, SOFT_SKILLS)
-    tools_found = extract_skills(text_normalized, tools_matcher, TOOLS)
+    tech_found = extract_skills(text_normalized, tech_matcher)
+    soft_found = extract_skills(text_normalized, soft_matcher)
+    tools_found = extract_skills(text_normalized, tools_matcher)
 
     # -------- MATCHING LOGIC --------
     job_desc_clean = job_desc.replace(",", " ")
     job_desc_normalized = normalize_text(job_desc_clean)
 
-    job_skills = []
-    for skill in TECHNICAL_SKILLS + SOFT_SKILLS + TOOLS:
-        if skill in job_desc_normalized:
-            job_skills.append(skill)
-    job_skills = list(set(job_skills))
+    # Extract required skills with the same PhraseMatcher used on the resume.
+    # This previously used `if skill in job_desc_normalized`, i.e. plain substring
+    # matching -- which had the exact bug the resume side avoids: a JD asking for
+    # "JavaScript" also registered "java" as a required skill, inflating the
+    # requirement count and reporting "java" as missing.
+    job_skills = extract_skills(job_desc_normalized, all_matcher)
 
     all_resume_skills = list(set(tech_found + soft_found + tools_found))
 
