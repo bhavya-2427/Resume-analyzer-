@@ -337,6 +337,12 @@ def upload_resume():
     if not file:
         return jsonify({"error": "No file uploaded"}), 400
 
+    # Without a job description there is nothing to match against: job_skills
+    # comes back empty, both scores land on 0, and the response would report a
+    # confident "Low match" for a request that was never answerable.
+    if not job_desc.strip():
+        return jsonify({"error": "Please paste a job description to compare the resume against."}), 400
+
     try:
         result = analyze_resume(file, job_desc)
         return jsonify(result)
@@ -363,6 +369,12 @@ def upload_batch():
 
     if len(files) > 20:
         return jsonify({"error": "Please upload 20 files or fewer at a time."}), 400
+
+    # Same reasoning as /upload -- and here it also means every resume would be
+    # ranked on an all-zero score, so the whole request is rejected rather than
+    # returning a meaningless ranking.
+    if not job_desc.strip():
+        return jsonify({"error": "Please paste a job description to compare the resumes against."}), 400
 
     results = []
     errors = []
